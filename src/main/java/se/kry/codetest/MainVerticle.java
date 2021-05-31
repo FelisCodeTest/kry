@@ -9,9 +9,9 @@ import io.vertx.ext.web.Router;
 import io.vertx.ext.web.handler.BodyHandler;
 import io.vertx.ext.web.handler.StaticHandler;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.validator.routines.UrlValidator;
 import se.kry.codetest.model.Service;
 
-import java.net.URISyntaxException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -75,9 +75,10 @@ public class MainVerticle extends AbstractVerticle {
               jsonBody.getString("name"),
               jsonBody.getString("url")
       );
-      if (service != null
-              && StringUtils.isNotEmpty(service.getName())
+      if (StringUtils.isNotEmpty(service.getName())
               && !services.containsKey(service.getName())
+              && validateUrl(service.getUrl())
+              && StringUtils.isNotEmpty(service.getUrl())
       ){
         connector.query(String.format(
                   INSERT_INTO_SERVICE,
@@ -153,6 +154,11 @@ public class MainVerticle extends AbstractVerticle {
         }
       }
     );
+  }
+
+  boolean validateUrl(String url){
+    UrlValidator urlValidator = new UrlValidator();
+    return (!url.startsWith("ftp") && urlValidator.isValid(url));
   }
 
 }
