@@ -7,6 +7,21 @@ fetch(servicesRequest)
     var li = document.createElement("li");
     li.appendChild(document.createTextNode(service.name + ' - ' + service.url  + " => "+ service.status));
     li.appendChild(document.createTextNode(' - Created on : '  + service.date));
+    var btn = document.createElement("BUTTON");
+    btn.appendChild(document.createTextNode('Delete'));
+    btn.onclick = evt => {
+           let name = service.name;
+           fetch('/service', {
+           method: 'delete',
+           headers: {
+           'Accept': 'application/json, text/plain, */*',
+           'Content-Type': 'application/json'
+           },
+         body: JSON.stringify({name:name})
+       }).then(res=> location.reload());
+       };
+
+    li.appendChild(btn);
     listContainer.appendChild(li);
   });
 });
