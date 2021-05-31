@@ -7,6 +7,7 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.handler.BodyHandler;
 import io.vertx.ext.web.handler.StaticHandler;
+import org.apache.commons.lang3.StringUtils;
 import se.kry.codetest.model.Service;
 
 import java.net.URISyntaxException;
@@ -69,7 +70,10 @@ public class MainVerticle extends AbstractVerticle {
                 jsonBody.getString("url")
         );
 
-        if (!services.containsKey(service.getName())) {
+        if (service != null
+                && StringUtils.isNotEmpty(service.getName())
+                && !services.containsKey(service.getName())
+        ) {
           services.put(service.getName(), service);
           req.response()
                   .putHeader("content-type", "text/plain")
@@ -81,6 +85,21 @@ public class MainVerticle extends AbstractVerticle {
       req.response()
               .putHeader("content-type", "text/plain")
               .end("KO");
+    });
+
+    router.delete("/service").handler(req -> {
+      JsonObject jsonBody = req.getBodyAsJson();
+      String name = jsonBody.getString("name");
+      if (StringUtils.isNotEmpty(name) && services.containsKey(name)){
+        services.remove(name);
+        req.response()
+                .putHeader("content-type", "text/plain")
+                .end("OK");
+      }
+      req.response()
+              .putHeader("content-type", "text/plain")
+              .end("KO");
+
     });
   }
 

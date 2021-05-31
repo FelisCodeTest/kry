@@ -45,7 +45,7 @@ public class TestMainVerticle {
         JsonObject requestBody = new JsonObject();
         String randomName = RandomStringUtils.randomAlphabetic(10);
         requestBody.put("name", randomName);
-        requestBody.put("url", "https://kry.se");
+        requestBody.put("url", "https://www.kry.se");
         WebClient.create(vertx)
                 .post(8080, "::1", "/service")
                 .sendJsonObject(requestBody, response ->testContext.verify(() -> {
@@ -64,7 +64,7 @@ public class TestMainVerticle {
         JsonObject requestBody = new JsonObject();
         String randomName = RandomStringUtils.randomAlphabetic(10);
         requestBody.put("name", randomName);
-        requestBody.put("url", "https://kry.se");
+        requestBody.put("url", "https://www.kry.se");
         WebClient.create(vertx)
                 .post(8080, "::1", "/service")
                 .sendJsonObject(requestBody, response ->testContext.verify(() -> {
@@ -86,7 +86,7 @@ public class TestMainVerticle {
         JsonObject requestBody = new JsonObject();
         String randomName = RandomStringUtils.randomAlphabetic(10);
         requestBody.put("name", randomName);
-        requestBody.put("url", "https://kry.se");
+        requestBody.put("url", "https://www.kry.se");
         WebClient.create(vertx)
                 .post(8080, "::1", "/service")
                 .sendJsonObject(requestBody, postResponse ->testContext.verify(() -> {
@@ -104,5 +104,49 @@ public class TestMainVerticle {
                             }));
 
                 }));
+    }
+
+    @Test
+    @DisplayName("add and delete a service")
+    @Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
+    void add_delete_service(Vertx vertx, VertxTestContext testContext) {
+        JsonObject requestBody = new JsonObject();
+        String randomName = RandomStringUtils.randomAlphabetic(10);
+        requestBody.put("name", randomName);
+        requestBody.put("url", "https://www.kry.se");
+        WebClient.create(vertx)
+                .post(8080, "::1", "/service")
+                .sendJsonObject(requestBody, postResponse ->testContext.verify(() -> {
+                    WebClient.create(vertx)
+                            .delete(8080, "::1", "/service")
+                            .sendJsonObject(requestBody, deleteResponse -> testContext.verify(() -> {
+                                assertEquals(200, deleteResponse.result().statusCode());
+                                assertEquals("OK", deleteResponse.result().bodyAsString());
+                                WebClient.create(vertx)
+                                        .get(8080, "::1", "/service")
+                                        .send(getResponse -> testContext.verify(() -> {
+                                            assertEquals(200, getResponse.result().statusCode());
+                                            JsonArray body = getResponse.result().bodyAsJsonArray();
+                                            assertEquals(0, body.size());
+                                            testContext.completeNow();
+                                        }));
+                            }));
+                }));
+    }
+    @Test
+    @DisplayName("delete a nonexisting service")
+    @Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
+    void delete_not_existing_service(Vertx vertx, VertxTestContext testContext) {
+        JsonObject requestBody = new JsonObject();
+        String randomName = RandomStringUtils.randomAlphabetic(10);
+        requestBody.put("name", randomName);
+        WebClient.create(vertx)
+                .delete(8080, "::1", "/service")
+                .sendJsonObject(requestBody, deleteResponse -> testContext.verify(() -> {
+                    assertEquals(200, deleteResponse.result().statusCode());
+                    assertEquals("KO", deleteResponse.result().bodyAsString());
+                    testContext.completeNow();
+                }));
+
     }
 }
