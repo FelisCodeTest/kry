@@ -7,14 +7,16 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.handler.BodyHandler;
 import io.vertx.ext.web.handler.StaticHandler;
+import se.kry.codetest.model.Service;
 
+import java.net.URISyntaxException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.stream.Collectors;
 
 public class MainVerticle extends AbstractVerticle {
 
-  private HashMap<String, String> services = new HashMap<>();
+  private HashMap<String, Service> services = new HashMap<>();
   //TODO use this
   private DBConnector connector;
   private BackgroundPoller poller = new BackgroundPoller();
@@ -24,7 +26,7 @@ public class MainVerticle extends AbstractVerticle {
     connector = new DBConnector(vertx);
     Router router = Router.router(vertx);
     router.route().handler(BodyHandler.create());
-    services.put("https://www.kry.se", "UNKNOWN");
+
     vertx.setPeriodic(1000 * 60, timerId -> poller.pollServices(services));
     setRoutes(router);
     vertx
@@ -46,10 +48,13 @@ public class MainVerticle extends AbstractVerticle {
       List<JsonObject> jsonServices = services
           .entrySet()
           .stream()
-          .map(service ->
+          .map(key ->
               new JsonObject()
-                  .put("name", service.getKey())
-                  .put("status", service.getValue()))
+                  .put("name", key.getValue().getName())
+                  .put("url", key.getValue().getUrl())
+                  .put("status", key.getValue().getLastStatus())
+                  .put("date", key.getValue().getCreationDate())
+          )
           .collect(Collectors.toList());
       req.response()
           .putHeader("content-type", "application/json")
@@ -57,10 +62,25 @@ public class MainVerticle extends AbstractVerticle {
     });
     router.post("/service").handler(req -> {
       JsonObject jsonBody = req.getBodyAsJson();
-      services.put(jsonBody.getString("url"), "UNKNOWN");
+
+      try{
+        Service service = new Service(
+                jsonBody.getString("name"),
+                jsonBody.getString("url")
+        );
+
+        if (!services.containsKey(service.getName())) {
+          services.put(service.getName(), service);
+          req.response()
+                  .putHeader("content-type", "text/plain")
+                  .end("OK");
+        }
+      } catch (URISyntaxException e) {
+        e.printStackTrace();
+      }
       req.response()
-          .putHeader("content-type", "text/plain")
-          .end("OK");
+              .putHeader("content-type", "text/plain")
+              .end("KO");
     });
   }
 
