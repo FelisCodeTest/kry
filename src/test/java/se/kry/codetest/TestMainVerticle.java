@@ -115,23 +115,31 @@ public class TestMainVerticle {
         requestBody.put("name", randomName);
         requestBody.put("url", "https://www.kry.se");
         WebClient.create(vertx)
-                .post(8080, "::1", "/service")
-                .sendJsonObject(requestBody, postResponse ->testContext.verify(() -> {
+                .get(8080, "::1", "/service")
+                .send(initialGetResponse -> testContext.verify(() -> {
+                    assertEquals(200, initialGetResponse.result().statusCode());
+                    int serviceCount = initialGetResponse.result().bodyAsJsonArray().size();
                     WebClient.create(vertx)
-                            .delete(8080, "::1", "/service")
-                            .sendJsonObject(requestBody, deleteResponse -> testContext.verify(() -> {
-                                assertEquals(200, deleteResponse.result().statusCode());
-                                assertEquals("OK", deleteResponse.result().bodyAsString());
+                            .post(8080, "::1", "/service")
+                            .sendJsonObject(requestBody, postResponse ->testContext.verify(() -> {
                                 WebClient.create(vertx)
-                                        .get(8080, "::1", "/service")
-                                        .send(getResponse -> testContext.verify(() -> {
-                                            assertEquals(200, getResponse.result().statusCode());
-                                            JsonArray body = getResponse.result().bodyAsJsonArray();
-                                            assertEquals(0, body.size());
-                                            testContext.completeNow();
+                                        .delete(8080, "::1", "/service")
+                                        .sendJsonObject(requestBody, deleteResponse -> testContext.verify(() -> {
+                                            assertEquals(200, deleteResponse.result().statusCode());
+                                            assertEquals("OK", deleteResponse.result().bodyAsString());
+                                            WebClient.create(vertx)
+                                                    .get(8080, "::1", "/service")
+                                                    .send(getResponse -> testContext.verify(() -> {
+                                                        assertEquals(200, getResponse.result().statusCode());
+                                                        JsonArray body = getResponse.result().bodyAsJsonArray();
+                                                        assertEquals(serviceCount, body.size());
+                                                        testContext.completeNow();
+                                                    }));
                                         }));
                             }));
                 }));
+
+
     }
     @Test
     @DisplayName("delete a nonexisting service")

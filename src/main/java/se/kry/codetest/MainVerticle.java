@@ -4,6 +4,7 @@ import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import io.vertx.ext.sql.ResultSet;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.handler.BodyHandler;
 import io.vertx.ext.web.handler.StaticHandler;
@@ -22,11 +23,18 @@ public class MainVerticle extends AbstractVerticle {
   private DBConnector connector;
   private BackgroundPoller poller = new BackgroundPoller();
 
+  private final String SELECT_ALL_SERVICES = "SELECT NAME, URL, CREATION_DATE, LAST_STATUS FROM SERVICE";
+  private final String INSERT_INTO_SERVICE = "INSERT INTO SERVICE (NAME, URL, CREATION_DATE, LAST_STATUS) values('%s', '%s', '%s', '%s')";
+  private final String DELETE_FROM_SERVICE = "DELETE FROM SERVICE WHERE NAME = '%s'";
+
   @Override
   public void start(Future<Void> startFuture) {
     connector = new DBConnector(vertx);
     Router router = Router.router(vertx);
     router.route().handler(BodyHandler.create());
+
+    //retrieve existing services
+    populateServices();
 
     vertx.setPeriodic(1000 * 60, timerId -> poller.pollServices(services));
     setRoutes(router);
@@ -63,44 +71,88 @@ public class MainVerticle extends AbstractVerticle {
     });
     router.post("/service").handler(req -> {
       JsonObject jsonBody = req.getBodyAsJson();
-
-      try{
-        Service service = new Service(
-                jsonBody.getString("name"),
-                jsonBody.getString("url")
-        );
-
-        if (service != null
-                && StringUtils.isNotEmpty(service.getName())
-                && !services.containsKey(service.getName())
-        ) {
-          services.put(service.getName(), service);
-          req.response()
-                  .putHeader("content-type", "text/plain")
-                  .end("OK");
-        }
-      } catch (URISyntaxException e) {
-        e.printStackTrace();
+      Service service = new Service(
+              jsonBody.getString("name"),
+              jsonBody.getString("url")
+      );
+      if (service != null
+              && StringUtils.isNotEmpty(service.getName())
+              && !services.containsKey(service.getName())
+      ){
+        connector.query(String.format(
+                  INSERT_INTO_SERVICE,
+                  service.getName(),
+                  service.getUrl(),
+                  service.getCreationDate(),
+                  service.getLastStatus()
+          )).setHandler(
+                  insertQuery->{
+                    if (insertQuery.succeeded()){
+                      services.put(service.getName(),service );
+                      req.response()
+                              .putHeader("content-type", "text/plain")
+                              .end("OK");
+                    }else{
+                      req.response()
+                              .putHeader("content-type", "text/plain")
+                              .end("KO");
+                    }
+                  }
+          );
+       }else{
+        req.response()
+                .putHeader("content-type", "text/plain")
+                .end("KO");
       }
-      req.response()
-              .putHeader("content-type", "text/plain")
-              .end("KO");
     });
 
     router.delete("/service").handler(req -> {
       JsonObject jsonBody = req.getBodyAsJson();
       String name = jsonBody.getString("name");
       if (StringUtils.isNotEmpty(name) && services.containsKey(name)){
-        services.remove(name);
+        connector.query(String.format(DELETE_FROM_SERVICE, name)).setHandler(
+                deleteQuery -> {
+                  if (deleteQuery.succeeded()) {
+                    services.remove(name);
+                    req.response()
+                            .putHeader("content-type", "text/plain")
+                            .end("OK");
+                  }else{
+                    req.response()
+                            .putHeader("content-type", "text/plain")
+                            .end("KO");
+                  }
+                }
+        );
+      }else{
         req.response()
                 .putHeader("content-type", "text/plain")
-                .end("OK");
+                .end("KO");
       }
-      req.response()
-              .putHeader("content-type", "text/plain")
-              .end("KO");
 
     });
+  }
+
+  private void populateServices() {
+    connector.query(SELECT_ALL_SERVICES).setHandler(
+      getQuery ->{
+        if (getQuery.succeeded()) {
+          // loop through the result set
+          ResultSet rs = getQuery.result();
+          if (rs != null) {
+            List<JsonArray> dbServices = rs.getResults();
+            for (JsonArray dbService : dbServices) {
+              String name = dbService.getString(0);
+              String url = dbService.getString(1);
+              String creationDate = dbService.getString(2);
+              String lastStatus = dbService.getString(3);
+              Service service = new Service(name, url, creationDate, lastStatus);
+              services.put(name, service);
+            }
+          }
+        }
+      }
+    );
   }
 
 }

@@ -13,6 +13,7 @@ public class DBConnector {
   private final String DB_PATH = "poller.db";
   private final SQLClient client;
 
+
   public DBConnector(Vertx vertx){
     JsonObject config = new JsonObject()
         .put("url", "jdbc:sqlite:" + DB_PATH)
@@ -20,6 +21,14 @@ public class DBConnector {
         .put("max_pool_size", 30);
 
     client = JDBCClient.createShared(vertx, config);
+
+    String sql = "CREATE TABLE IF NOT EXISTS service (\n"
+            + "	name TEXT NOT NULL PRIMARY KEY,\n"
+            + "	url TEXT NOT NULL,\n"
+            + "	creation_date datetime not null, \n"
+            + "	last_status datetime not null\n"
+            + ");";
+    query(sql);
   }
 
   public Future<ResultSet> query(String query) {

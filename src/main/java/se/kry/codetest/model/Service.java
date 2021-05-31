@@ -2,7 +2,6 @@ package se.kry.codetest.model;
 
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
@@ -12,20 +11,33 @@ public class Service {
     String host;
     String lastStatus;
     String creationDate;
-    public Service(String name, String url) throws URISyntaxException{
+    public Service(String name, String url){
+        this(name, url, null, "UNKNOWN");
+    }
+
+    public Service(String name, String url, String creationDate, String lastStatus){
         this.name = name;
         this.url = url;
-
-        //Set date in ISO8601 format
+        if (creationDate == null)
+            this.creationDate = getDate();
+        else
+            this.creationDate = creationDate;
+        URI uri = null;
+        try {
+            uri = new URI(url);
+            this.host = uri.getHost();
+        } catch (URISyntaxException e) {
+            this.host = null;
+            e.printStackTrace();
+        }
+        this.lastStatus = lastStatus;
+    }
+    private String getDate(){
+        //get date in ISO8601 format
         String pattern = "yyyy-MM-dd hh:mm:ss";
         SimpleDateFormat sdf = new SimpleDateFormat(pattern);
         Date date = new Date();
-        this.creationDate = sdf.format(date);
-
-        URI uri = new URI(url);
-        this.host = uri.getHost();
-
-        this.lastStatus = "UNKNOWN";
+        return  sdf.format(date);
     }
 
     public String getUrl() {
