@@ -19,9 +19,8 @@ import java.util.stream.Collectors;
 public class MainVerticle extends AbstractVerticle {
 
   private HashMap<String, Service> services = new HashMap<>();
-  //TODO use this
   private DBConnector connector;
-  private BackgroundPoller poller = new BackgroundPoller();
+  private BackgroundPoller poller;
 
   private final String SELECT_ALL_SERVICES = "SELECT NAME, URL, CREATION_DATE, LAST_STATUS FROM SERVICE";
   private final String INSERT_INTO_SERVICE = "INSERT INTO SERVICE (NAME, URL, CREATION_DATE, LAST_STATUS) values('%s', '%s', '%s', '%s')";
@@ -30,13 +29,14 @@ public class MainVerticle extends AbstractVerticle {
   @Override
   public void start(Future<Void> startFuture) {
     connector = new DBConnector(vertx);
+    poller = new BackgroundPoller(vertx);
     Router router = Router.router(vertx);
     router.route().handler(BodyHandler.create());
 
     //retrieve existing services
     populateServices();
 
-    vertx.setPeriodic(1000 * 60, timerId -> poller.pollServices(services));
+    vertx.setPeriodic(1000 * 10, timerId -> poller.pollServices(services));
     setRoutes(router);
     vertx
         .createHttpServer()

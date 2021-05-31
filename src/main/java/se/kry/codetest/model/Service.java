@@ -12,7 +12,7 @@ public class Service {
     String lastStatus;
     String creationDate;
     public Service(String name, String url){
-        this(name, url, null, "UNKNOWN");
+        this(name, url, null, Status.UNKNOWN);
     }
 
     public Service(String name, String url, String creationDate, String lastStatus){
@@ -80,6 +80,11 @@ public class Service {
         this.creationDate = creationDate;
     }
 
-
+    public class Status{
+        public final static String ONLINE = "ONLINE";
+        public final static String OFFLINE = "OFFLINE";
+        public final static String UNKNOWN = "UNKNOWN";
+        public final static String WRONG_URL = "WRONG URL";
+    }
 
 }
