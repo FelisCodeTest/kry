@@ -11,6 +11,7 @@ public class Service {
     String host;
     String lastStatus;
     String creationDate;
+    boolean isPolling;
     public Service(String name, String url){
         this(name, url, null, Status.UNKNOWN);
     }
@@ -31,6 +32,7 @@ public class Service {
             e.printStackTrace();
         }
         this.lastStatus = lastStatus;
+        this.isPolling = false;
     }
     private String getDate(){
         //get date in ISO8601 format
@@ -85,6 +87,14 @@ public class Service {
         public final static String OFFLINE = "OFFLINE";
         public final static String UNKNOWN = "UNKNOWN";
         public final static String WRONG_URL = "WRONG URL";
+    }
+
+    public boolean isPolling() {
+        return isPolling;
+    }
+
+    public void setPolling(boolean polling) {
+        isPolling = polling;
     }
 
 }
